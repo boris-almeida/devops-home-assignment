@@ -153,3 +153,56 @@ In EKS, credentials must not be hardcoded; how you supply them is part of the as
 ---
 
 Good luck.
+
+---
+
+## Kubernetes Deployment (EKS)
+
+### Prerequisites
+
+- AWS CLI configured
+- Terraform >= 1.5
+- kubectl
+- helm
+- docker
+
+---
+
+### 1. Provision infrastructure
+
+cd terraform/envs/dev
+terraform init
+terraform apply
+
+---
+
+### 2. Build and push Docker image
+
+aws ecr get-login-password --region us-east-1 \
+  | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
+
+docker build -t acme-api ../../code
+
+docker tag acme-api:latest \
+  <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/acme-api:latest
+
+docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/acme-api:latest
+
+---
+
+### 3. Deploy with Helm
+
+cd ../../../helm/acme-api
+
+helm upgrade --install acme-api . -n acme --create-namespace
+
+---
+
+### 4. Access API
+
+kubectl -n acme port-forward svc/acme-api 8000:8000
+
+Test:
+
+curl http://127.0.0.1:8000/users
+
